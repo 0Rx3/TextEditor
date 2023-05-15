@@ -2,7 +2,7 @@
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QTextBlockFormat, QTextCharFormat, QTextListFormat, \
-    QTextTableFormat
+    QTextTableFormat, QTextFormat
 
 from Styling.Ruler import convert_mm_to_px
 
@@ -21,7 +21,6 @@ class BlockStyle(QObject):
         self._blockFormat = block_format
         self._charFormat = char_format
         self._listFormat = list_format
-        self.listChanged = 0
         self._tableFormat = table_format
         self.parentNumeration = None
         self._backupListFormat = None

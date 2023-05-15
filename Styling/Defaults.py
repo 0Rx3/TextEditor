@@ -1,3 +1,4 @@
+from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextListFormat, QTextCharFormat, \
     QTextBlockFormat, QTextTableFormat, QTextTableCellFormat
@@ -23,9 +24,13 @@ default_list_format.setIndent(0)
 
 disc_marker = "•"
 
-numeric_formats = [QTextListFormat.Style.ListDecimal, QTextListFormat.Style.ListLowerAlpha,
-                   QTextListFormat.Style.ListUpperAlpha, QTextListFormat.Style.ListLowerRoman,
-                   QTextListFormat.Style.ListUpperRoman]
+numeric_formats = [
+    QTextListFormat.Style.ListDecimal,
+    QTextListFormat.Style.ListLowerAlpha,
+    QTextListFormat.Style.ListUpperAlpha,
+    QTextListFormat.Style.ListLowerRoman,
+    QTextListFormat.Style.ListUpperRoman
+]
 
 
 def convert_decimal_to_roman(num, lower=False):
@@ -155,6 +160,7 @@ def convert_decimal_to_alpha(num, lower=False):
             res += "B"
             num -= 2
         elif num >= 1:
+            num -= 1
             res += "A"
     if lower:
         return res.lower()
@@ -168,3 +174,76 @@ def _check_paradox(style1, style2):
             return True
         style1 = style1.parentNumeration
 
+
+def compare_char_format(style1: QTextCharFormat, style2: QTextCharFormat):
+    if style1 is None or style2 is None:
+        print("stopped on None")
+        return False
+    if style1.fontPointSize() != style2.fontPointSize() and style2.fontPointSize() != 0.0:
+        print(F"stopped on fontSize {style1.fontPointSize()} != {style2.fontPointSize()}")
+        return False
+    if style1.fontItalic() != style2.fontItalic():
+        print("stopped on fontItalic")
+        return False
+    if style1.fontUnderline() != style2.fontUnderline():
+        print("stopped on fontUnderline")
+        return False
+    if style1.fontStrikeOut() != style2.fontStrikeOut():
+        print("stopped on fontStrikeOut")
+        return False
+    if style1.fontWeight() != style2.fontWeight():
+        print("stopped on fontWeight")
+        return False
+    if style1.fontFamily() != style2.fontFamily():
+        print("stopped on fontFamily")
+        return False
+    return True
+
+
+def compare_block_format(style1, style2):
+    if style1 is None or style2 is None:
+        return False
+    if style1.alignment() != style2.alignment():
+        return False
+    if style1.indent() != style2.indent():
+        return False
+    if style1.leftMargin() != style2.leftMargin():
+        return False
+    if style1.rightMargin() != style2.rightMargin():
+        return False
+    if style1.topMargin() != style2.topMargin():
+        return False
+    if style1.bottomMargin() != style2.bottomMargin():
+        return False
+    if style1.textIndent() != style2.textIndent():
+        return False
+    if style1.lineHeight() != style2.lineHeight():
+        return False
+    return True
+
+
+def compare_list_format(style1: QTextListFormat, style2: QTextListFormat):
+    if style1 is None or style2 is None:
+        return False
+    if style1.style() != style2.style():
+        return False
+    if style1.indent() != style2.indent():
+        return False
+    return True
+
+def convert_mm_to_px(mm):
+    screen = QtWidgets.QApplication.primaryScreen()
+    width_mm = screen.physicalSize().width()
+    width_px = screen.geometry().width()
+    ratio = width_px / width_mm
+    result = mm * ratio
+    return result
+
+
+def convert_px_to_mm(px):
+    screen = QtWidgets.QApplication.primaryScreen()
+    width_mm = screen.physicalSize().width()
+    width_px = screen.geometry().width()
+    ratio = width_px / width_mm
+    result = px / ratio
+    return result
