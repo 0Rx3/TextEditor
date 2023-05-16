@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QAction
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QSizePolicy, QListWidget, \
-    QListWidgetItem, QLineEdit
+    QListWidgetItem, QLineEdit, QWidgetAction
 
 from Styling.AlignStyles import AlignStyles
 from Styling.BlockOffsets import BlockOffsets
@@ -95,6 +95,8 @@ class SideStyler(QWidget):
         self.StyleName.textChanged.connect(self._style_name_changed)
 
         self.ListSwitcher.clicked.connect(self._list_switched)
+
+        self.BoldAction = QAction("Bold", self)
 
     def block(self, bool):
         self.AlignButtons.blockSignals(bool)

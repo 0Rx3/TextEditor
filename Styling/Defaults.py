@@ -3,6 +3,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QTextListFormat, QTextCharFormat, \
     QTextBlockFormat, QTextTableFormat, QTextTableCellFormat
 
+from Styling.BlockStyle import BlockStyle
+
 default_char_format = QTextCharFormat()
 default_block_format = QTextBlockFormat()
 default_list_format = QTextListFormat()
@@ -21,6 +23,7 @@ default_block_format.setAlignment(Qt.AlignmentFlag.AlignJustify)
 default_list_format.setStyle(QTextListFormat.Style.ListDecimal)
 default_list_format.setIndent(0)
 
+DefaultBlockStyle = BlockStyle(block_format=default_block_format, char_format=default_char_format, name="Default")
 
 disc_marker = "•"
 
@@ -177,25 +180,18 @@ def _check_paradox(style1, style2):
 
 def compare_char_format(style1: QTextCharFormat, style2: QTextCharFormat):
     if style1 is None or style2 is None:
-        print("stopped on None")
         return False
     if style1.fontPointSize() != style2.fontPointSize() and style2.fontPointSize() != 0.0:
-        print(F"stopped on fontSize {style1.fontPointSize()} != {style2.fontPointSize()}")
         return False
     if style1.fontItalic() != style2.fontItalic():
-        print("stopped on fontItalic")
         return False
     if style1.fontUnderline() != style2.fontUnderline():
-        print("stopped on fontUnderline")
         return False
     if style1.fontStrikeOut() != style2.fontStrikeOut():
-        print("stopped on fontStrikeOut")
         return False
     if style1.fontWeight() != style2.fontWeight():
-        print("stopped on fontWeight")
         return False
     if style1.fontFamily() != style2.fontFamily():
-        print("stopped on fontFamily")
         return False
     return True
 

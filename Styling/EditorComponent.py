@@ -1,22 +1,22 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QTextCursor, QTextList, QTextOption, QTextBlock, QTextFormat, QTextListFormat
+from PyQt6.QtGui import QTextCursor, QTextList, QTextOption, QTextBlock, QTextFormat, QTextListFormat, QAction
 from PyQt6.QtPrintSupport import QPrinter
-from PyQt6.QtWidgets import QTextEdit, QGridLayout, QWidget, QVBoxLayout, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QTextEdit, QGridLayout, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QFileDialog
 
-from Exporter.ToDocx import convert_qt_to_docx
+import json
 from Exporter.ToMarkdown import convert_qt_markdown
 from Styling.BlockStyle import BlockStyle
 from Styling.BorderRuler import VBorderRuler, HBorderRuler
 from Styling.Defaults import default_char_format, default_block_format, numeric_formats, _check_paradox, disc_marker, \
-    convert_decimal_to_alpha, convert_decimal_to_roman
+    convert_decimal_to_alpha, convert_decimal_to_roman, DefaultBlockStyle
 from Styling.Highlighter import BlockHighlighter
 from Styling.ListSettings.SideListStyler import SideListStyler
 from Styling.Ruler import Ruler, convert_mm_to_px
 from Styling.SideStyler import SideStyler
 from Styling.Switches.SwitchButton import SwitchButton
+from Exporter.ToJSON import toJSON, fromJSON
 
-
-class StylishEdit(QWidget):
+class EditorComponent(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -40,13 +40,14 @@ class StylishEdit(QWidget):
         self.currentBlock = self.textEdit.document().firstBlock()
         self.currentStyle = 0
         self.blockStyles = [0]
-        self.styles = [BlockStyle(block_format=default_block_format, char_format=default_char_format, name="Default")]
-        self.textEdit.cursorPositionChanged.connect(self._force_update)
+        self.styles = [DefaultBlockStyle.copy()]
+        self.styles[0].name = "Default"
+        self.textEdit.cursorPositionChanged.connect(self.force_update)
         self.sideStyler.init(self.styles[self.currentStyle], 0, self.styles)
         self.sideStyler.addedStyle.connect(self.addStyle)
         self.sideStyler.removedStyle.connect(self.removeStyle)
         self.sideStyler.changedId.connect(self._on_style_switch)
-        self.sideStyler.anyChange.connect(self._force_update)
+        self.sideStyler.anyChange.connect(self.force_update)
 
         self.sideListStyler = SideListStyler(self, self.styles, self.currentStyle)
         self.sideListStyler.changedParent.connect(self._on_parent_change)
@@ -58,16 +59,25 @@ class StylishEdit(QWidget):
         self.highlighter = BlockHighlighter(self.styles, self.blockStyles, self.textEdit.document())
 
         self.HTMLExport = QPushButton("to .pdf", self)
-        self.DOCXExport = QPushButton("to .docx", self)
         self.MDExport = QPushButton("to .md", self)
+        self.JSONExport = QPushButton("to .json", self)
         self.HTMLExport.clicked.connect(self._to_pdf)
         self.MDExport.clicked.connect(self._to_md)
-        self.DOCXExport.setEnabled(False)
+        self.JSONExport.clicked.connect(self._to_json)
 
         export_buttons = QHBoxLayout()
         export_buttons.addWidget(self.HTMLExport)
-        export_buttons.addWidget(self.DOCXExport)
+        export_buttons.addWidget(self.JSONExport)
         export_buttons.addWidget(self.MDExport)
+
+        JSONDialogue = QFileDialog(self)
+        JSONDialogue.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        JSONDialogue.setNameFilter("JSON (*.json)")
+        JSONDialogue.fileSelected.connect(self._from_json)
+        openJSONButton = QPushButton("from .json", self)
+        openJSONButton.clicked.connect(JSONDialogue.open)
+
+        export_buttons.addWidget(openJSONButton)
 
         layout = QGridLayout()
         layout.addWidget(self.NonPrintable, 0, 0, 3, 1)
@@ -86,6 +96,9 @@ class StylishEdit(QWidget):
         self.highlighter.createdList.connect(self._list_handle)
         self.styles[0].changed.connect(lambda x: self.highlighter.highlightBlock(""))
         self.update_margins((self.widthRuler.value(), self.textRuler.value()), self.getCurrentStyle())
+
+        self.BoldAction = QAction("Bold", self)
+        self.BoldAction.setCheckable(True)
 
     def update_margins(self, vals, style):
         borders, block = vals
@@ -157,11 +170,13 @@ class StylishEdit(QWidget):
 
     def addStyle(self, style: BlockStyle):
         self.styles.append(style)
+        self.styles[-1].changed.connect(lambda x: self.highlighter.highlightBlock(""))
         self.currentStyle = self.sideStyler.Selector.currentRow() + 1
         blocks = self._get_blocks_between()
         self.sideStyler.init(self.styles[self.currentStyle], self.currentStyle, self.styles)
         for b in blocks:
             self.blockStyles[b] = self.currentStyle
+        self.highlighter.highlightBlock("")
 
     def removeStyle(self, num: int):
         if num == 0:
@@ -171,11 +186,13 @@ class StylishEdit(QWidget):
         for i in range(len(self.blockStyles)):
             if self.blockStyles[i] == num:
                 self.blockStyles[i] = self.currentStyle
+        self.highlighter.highlightBlock("")
 
-    def _force_update(self):
+    def force_update(self):
         self.currentBlock = self.textEdit.textCursor().block()
         self.balanceBlocks(self.textEdit.textCursor())
         self.highlighter.blockStyles = self.blockStyles
+        self.highlighter.styles = self.styles
         self.currentStyle = self.blockStyles[self.currentBlock.blockNumber()]
         self.sideStyler.init(self.styles[self.currentStyle], self.currentStyle, self.styles)
         self.sideListStyler.init(self.styles, self._get_possible_parents(self.currentBlock), self.currentStyle)
@@ -264,7 +281,7 @@ class StylishEdit(QWidget):
         blocks_to_change = self._get_blocks_between()
         for blockId in blocks_to_change:
             self.blockStyles[blockId] = styleId
-        self._restore_cursor_position(cp, sp)
+        #self._restore_cursor_position(cp, sp)
 
     def _get_blocks_between(self):
         cursor = self.textEdit.textCursor()
@@ -275,6 +292,8 @@ class StylishEdit(QWidget):
             block = self.textEdit.document().findBlock(i)
             if block.blockNumber() not in blocks:
                 blocks.append(block.blockNumber())
+        if not blocks:
+            blocks.append(self.currentBlock.blockNumber())
         return blocks
 
     def _to_pdf(self):
@@ -286,6 +305,11 @@ class StylishEdit(QWidget):
 
     def _to_md(self):
         convert_qt_markdown(self.textEdit.document(), "tryout1.md")
+
+    def _to_json(self):
+        json_data = toJSON(self)
+        with open("tryout1.json", "w") as f:
+            json.dump(json_data, f)
 
     def _get_possible_parents(self, block):
         res = []
@@ -350,6 +374,13 @@ class StylishEdit(QWidget):
                 cursor.setPosition(start_pos)
                 cursor.setPosition(end_pos, QTextCursor.MoveMode.KeepAnchor)
             self.textEdit.setTextCursor(cursor)
+
+    def _from_json(self):
+        with open("tryout1.json", "r") as f:
+            json_data = json.load(f)
+        fromJSON(json_data, self)
+
+
 
 # TODO:
 # Rework how list styles are applied: main problem - looking for a list constantly instead of passing it

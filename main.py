@@ -1,6 +1,8 @@
 from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction
 
-from Styling.StylishEdit import StylishEdit
+from Styling.EditorComponent import EditorComponent
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -12,9 +14,9 @@ class MainWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
         widget.setLayout(layout)
 
-        switch_button = StylishEdit()
+        edit = EditorComponent()
 
-        self.setCentralWidget(switch_button)
+        self.setCentralWidget(edit)
 
 
 app = QtWidgets.QApplication([])

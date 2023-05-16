@@ -36,8 +36,6 @@ class BlockHighlighter(QSyntaxHighlighter):
                     cursor.setBlockFormat(style.blockFormat())
                 cursor.setCharFormat(style.charFormat())
             else:
-                found = self._find_closest_style_list(style, first_block)
-
                 cursor.createList(style.listFormat())
                 self.createdList.emit(cursor.currentList(), first_block)
                 if not compare_char_format(cursor.charFormat(), style.charFormat()):

@@ -1,8 +1,8 @@
 # create container of QTextBlockFormat and QTextCharFormat
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal, Qt
 from PyQt6.QtGui import QTextBlockFormat, QTextCharFormat, QTextListFormat, \
-    QTextTableFormat, QTextFormat
+    QTextTableFormat, QTextFormat, QFont, QColor
 
 from Styling.Ruler import convert_mm_to_px
 
@@ -15,16 +15,23 @@ class BlockStyle(QObject):
     changed = pyqtSignal(bool)
 
     def __init__(self, block_format=QTextBlockFormat(), char_format=QTextCharFormat(), list_format=None,
-                 table_format=None, name="Default"):
+                 table_format=None, name="Default", JSON=None):
         super().__init__()
+
+        self.parentNumeration = None
+        self._backupListFormat = None
+        self._backupTableFormat = None
+
+        if JSON is not None:
+            self.fromJSON(JSON)
+            return
+
         self.name = name
         self._blockFormat = block_format
         self._charFormat = char_format
         self._listFormat = list_format
         self._tableFormat = table_format
-        self.parentNumeration = None
-        self._backupListFormat = None
-        self._backupTableFormat = None
+
 
     def blockFormat(self):
         return QTextBlockFormat(self._blockFormat)
@@ -172,7 +179,6 @@ class BlockStyle(QObject):
 
     def turnOnOffList(self):
         if self._listFormat is None and self._backupListFormat is None:
-            print("created")
             self._listFormat = QTextListFormat()
             self._listFormat.setStyle(QTextListFormat.Style.ListDecimal)
             self._listFormat.setIndent(0)
@@ -180,18 +186,17 @@ class BlockStyle(QObject):
             self.changed.emit(True)
             return
         if self._listFormat is None:
-            print("switched from backup")
             self._listFormat = self._backupListFormat
             self._blockFormat.setIndent(0)
             self._backupListFormat = None
         else:
-            print("switched to backup")
             self._backupListFormat = self._listFormat
             self._blockFormat.setIndent(0)
             self._listFormat = None
         self.changed.emit(True)
 
     def updateParent(self, style):
+        self.changed.emit(True)
         if self._listFormat is None:
             return
         if style is None or style.listFormat() is None:
@@ -200,7 +205,6 @@ class BlockStyle(QObject):
             return
         self.parentNumeration = style
         self._listFormat.setIndent(self.parentNumeration.listFormat().indent() + 1)
-        print("changedParent:", style)
 
     def copy(self):
         return BlockStyle(self.blockFormat(), self.charFormat(), self.listFormat(), self.tableFormat(),
@@ -208,14 +212,12 @@ class BlockStyle(QObject):
 
     def updateName(self, name: str):
         self.name = name
-        self.listChanged = 1
         self.changed.emit(True)
 
     def updateListIndent(self, num: int):
         if self._listFormat is None:
             return
         self._listFormat.setIndent(num)
-        self.listChanged = 1
         self.changed.emit(True)
 
     def updateListType(self, num: int):
@@ -255,3 +257,115 @@ class BlockStyle(QObject):
             res += " P:N "
 
         return res
+
+    def _char_to_JSON(self):
+        return {
+            "font": {
+                "family": self.charFormat().font().family(),
+                "size": self.charFormat().fontPointSize(),
+                "bold": self.charFormat().font().bold(),
+                "italic": self.charFormat().font().italic(),
+                "underline": self.charFormat().font().underline(),
+                "strikeout": self.charFormat().font().strikeOut()
+            },
+        }
+
+    def _block_to_JSON(self):
+        return {
+            "alignment": self.blockFormat().alignment(),
+            "textIndent": self.blockFormat().textIndent(),
+            "heading": self.blockFormat().headingLevel(),
+            "lineHeight": self.blockFormat().lineHeight(),
+            "leftMargin": self.blockFormat().leftMargin(),
+            "rightMargin": self.blockFormat().rightMargin(),
+            "topMargin": self.blockFormat().topMargin(),
+            "bottomMargin": self.blockFormat().bottomMargin()
+        }
+
+    def _list_to_JSON(self):
+        if self.listFormat() is None:
+            return None
+        styles = [
+            QTextListFormat.Style.ListDisc,
+            QTextListFormat.Style.ListCircle,
+            QTextListFormat.Style.ListSquare,
+            QTextListFormat.Style.ListDecimal,
+            QTextListFormat.Style.ListLowerAlpha,
+            QTextListFormat.Style.ListUpperAlpha,
+            QTextListFormat.Style.ListLowerRoman,
+            QTextListFormat.Style.ListUpperRoman
+        ]
+        return {
+            "indent": self.listFormat().indent(),
+            "style": styles.index(self.listFormat().style()),
+            "prefix": self.listFormat().numberPrefix(),
+            "suffix": self.listFormat().numberSuffix()
+        }
+
+    def toJSON(self):
+        return {
+            "name": self.name,
+            "charFormat": self._char_to_JSON(),
+            "blockFormat": self._block_to_JSON(),
+            "listFormat": self._list_to_JSON()
+        }
+
+    def _char_from_JSON(self, JSON):
+        res = QTextCharFormat()
+        font = QFont()
+        font.setFamily(JSON["font"]["family"])
+        font.setPointSize(JSON["font"]["size"])
+        font.setBold(JSON["font"]["bold"])
+        font.setItalic(JSON["font"]["italic"])
+        font.setUnderline(JSON["font"]["underline"])
+        font.setStrikeOut(JSON["font"]["strikeout"])
+        res.setFont(font)
+        return res
+
+    def _block_from_JSON(self, JSON):
+        res = QTextBlockFormat()
+        alignments = {
+            0: Qt.AlignmentFlag.AlignLeft,
+            1: Qt.AlignmentFlag.AlignRight,
+            132: Qt.AlignmentFlag.AlignHCenter,
+            8: Qt.AlignmentFlag.AlignJustify,
+        }
+        print(JSON["alignment"])
+        res.setAlignment(alignments[JSON["alignment"]])
+        res.setTextIndent(JSON["textIndent"])
+        res.setHeadingLevel(JSON["heading"])
+        if JSON["lineHeight"] != 0:
+            res.setLineHeight(JSON["lineHeight"], 1)
+        res.setLeftMargin(JSON["leftMargin"])
+        res.setRightMargin(JSON["rightMargin"])
+        res.setTopMargin(JSON["topMargin"])
+        res.setBottomMargin(JSON["bottomMargin"])
+        return res
+
+    def _list_from_JSON(self, JSON):
+        if JSON is None:
+            return None
+        styles = [
+            QTextListFormat.Style.ListDisc,
+            QTextListFormat.Style.ListCircle,
+            QTextListFormat.Style.ListSquare,
+            QTextListFormat.Style.ListDecimal,
+            QTextListFormat.Style.ListLowerAlpha,
+            QTextListFormat.Style.ListUpperAlpha,
+            QTextListFormat.Style.ListLowerRoman,
+            QTextListFormat.Style.ListUpperRoman
+        ]
+        res = QTextListFormat()
+        res.setIndent(JSON["indent"])
+        res.setStyle(styles[JSON["style"]])
+        res.setNumberPrefix(JSON["prefix"])
+        if JSON["suffix"] != "":
+            res.setNumberSuffix(JSON["suffix"])
+        return res
+
+    def fromJSON(self, JSON):
+        self.name = JSON["name"]
+        self._charFormat = self._char_from_JSON(JSON["charFormat"])
+        self._blockFormat = self._block_from_JSON(JSON["blockFormat"])
+        self._listFormat = self._list_from_JSON(JSON["listFormat"])
+        self.changed.emit(True)
