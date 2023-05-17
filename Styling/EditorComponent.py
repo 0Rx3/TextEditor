@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QTextCursor, QTextList, QTextOption, QTextBlock, QTextFormat, QTextListFormat, QAction
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QTextEdit, QGridLayout, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QFileDialog
@@ -16,6 +16,8 @@ from Styling.SideStyler import SideStyler
 from Styling.Switches.SwitchButton import SwitchButton
 from Styling.EmittingEdit import EmittingEdit
 from Exporter.ToJSON import toJSON, fromJSON
+
+timer_active = False
 
 class EditorComponent(QWidget):
     def __init__(self):
@@ -95,7 +97,7 @@ class EditorComponent(QWidget):
 
         self.setLayout(mainLayout)
         self.highlighter.createdList.connect(self._list_handle)
-        self.styles[0].changed.connect(lambda x: self.highlighter.highlightBlock(""))
+        self.styles[0].changed.connect(self.update_checker)
         self.update_margins((self.widthRuler.value(), self.textRuler.value()), self.getCurrentStyle())
 
         self.BoldAction = QAction("Bold", self)
@@ -105,7 +107,7 @@ class EditorComponent(QWidget):
         borders, block = vals
         style.updateMarginLeft(block[0])
         style.updateMarginRight(self.textRuler.maximum() - block[2])
-        style.updateIndent(block[1] - block[0])
+        style.updateTextIndent(block[1] - block[0])
 
     def _list_handle(self, list: QTextList, block: QTextBlock):
         style = self.getBlockStyle(block)
@@ -179,7 +181,7 @@ class EditorComponent(QWidget):
 
     def addStyle(self, style: BlockStyle):
         self.styles.append(style)
-        self.styles[-1].changed.connect(lambda x: self.highlighter.highlightBlock(""))
+        self.styles[-1].changed.connect(self.update_checker)
         self.currentStyle = self.sideStyler.Selector.currentRow() + 1
         blocks = self._get_blocks_between()
         self.sideStyler.init(self.styles[self.currentStyle], self.currentStyle, self.styles)
@@ -197,14 +199,25 @@ class EditorComponent(QWidget):
                 self.blockStyles[i] = self.currentStyle
         self.highlighter.highlightBlock("")
 
+    def update_checker(self):
+        global timer_active
+
+        if not timer_active:
+            timer_active = True
+            self.force_update()
+            self.highlighter.highlightBlock("")
+            QTimer.singleShot(100, self.update_checker)
+
     def force_update(self):
         self.currentBlock = self.textEdit.textCursor().block()
-        self.balanceBlocks(self.textEdit.textCursor())
+        if len(self.blockStyles) != self.textEdit.document().blockCount():
+            self.balanceBlocks(self.textEdit.textCursor())
         self.highlighter.blockStyles = self.blockStyles
         self.highlighter.styles = self.styles
         self.currentStyle = self.blockStyles[self.currentBlock.blockNumber()]
         self.sideStyler.init(self.styles[self.currentStyle], self.currentStyle, self.styles)
         self.sideListStyler.init(self.styles, self._get_possible_parents(self.currentBlock), self.currentStyle)
+
 
     def getConsecutiveBlocks(self, style):
         blocks = []

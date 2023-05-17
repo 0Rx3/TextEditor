@@ -78,7 +78,7 @@ class BlockStyle(QObject):
         self.charFormatChanged.emit(self._charFormat)
         self.changed.emit(True)
 
-    def updateIndent(self, indent):
+    def updateTextIndent(self, indent):
         self._blockFormat.setTextIndent(convert_mm_to_px(indent))
         self.blockFormatChanged.emit(self._blockFormat)
         self.changed.emit(True)

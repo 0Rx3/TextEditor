@@ -53,12 +53,12 @@ class BlockHighlighter(QSyntaxHighlighter):
                     if first_block.position() > 0:
                         cursor.setPosition(first_block.position() - 1)
                     cursor.setPosition(last_block.position() + last_block.length() - 1, QTextCursor.MoveMode.KeepAnchor)
-                    cursor.mergeCharFormat(style.charFormat())
+                    cursor.setCharFormat(style.charFormat())
                 if not compare_block_format(cursor.blockFormat(), style.blockFormat()):
                     if first_block.position() > 0:
                         cursor.setPosition(first_block.position())
                     cursor.setPosition(last_block.position(), QTextCursor.MoveMode.KeepAnchor)
-                    cursor.mergeBlockFormat(style.blockFormat())
+                    cursor.setBlockFormat(style.blockFormat())
         cursor.endEditBlock()
 
     def getConsecutiveBlocks(self, style):
