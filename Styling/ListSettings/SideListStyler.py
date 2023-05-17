@@ -52,7 +52,7 @@ class SideListStyler(QWidget):
         self.init(init, parentNames)
 
     def getParentIndex(self):
-        style = self.style.parentNumeration
+        style = self.style.parent
         if style is None:
             return -1
         else:

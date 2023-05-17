@@ -8,7 +8,8 @@ def toJSON(edit):
     data = {
         "styles": [],
         "blockStyles": [],
-        "text": []
+        "text": [],
+        "styleParent": []
     }
     for style in edit.styles:
         data["styles"].append(style.toJSON())
@@ -18,6 +19,8 @@ def toJSON(edit):
     for i in range(block_count):
         block = edit.textEdit.document().findBlockByNumber(i)
         data["text"].append(block.text())
+    for style in edit.styles:
+        data["styleParent"].append(edit.styles.index(style.parent) if style.parent is not None else -1)
     return data
 
 
@@ -43,5 +46,10 @@ def fromJSON(JSON, edit):
     edit.textEdit.blockSignals(False)
     for styleId in JSON["blockStyles"]:
         edit.blockStyles.append(styleId)
+    for num, styleId in enumerate(JSON["styleParent"]):
+        if styleId == -1:
+            edit.styles[num].parent = None
+        else:
+            edit.styles[num].parent = edit.styles[styleId]
     edit.blockSignals(False)
     edit.force_update()

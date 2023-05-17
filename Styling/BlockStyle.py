@@ -18,7 +18,7 @@ class BlockStyle(QObject):
                  table_format=None, name="Default", JSON=None):
         super().__init__()
 
-        self.parentNumeration = None
+        self.parent = None
         self._backupListFormat = None
         self._backupTableFormat = None
 
@@ -31,7 +31,6 @@ class BlockStyle(QObject):
         self._charFormat = char_format
         self._listFormat = list_format
         self._tableFormat = table_format
-
 
     def blockFormat(self):
         return QTextBlockFormat(self._blockFormat)
@@ -182,7 +181,7 @@ class BlockStyle(QObject):
             self._listFormat = QTextListFormat()
             self._listFormat.setStyle(QTextListFormat.Style.ListDecimal)
             self._listFormat.setIndent(0)
-            self.parentNumeration = None
+            self.parent = None
             self.changed.emit(True)
             return
         if self._listFormat is None:
@@ -200,11 +199,11 @@ class BlockStyle(QObject):
         if self._listFormat is None:
             return
         if style is None or style.listFormat() is None:
-            self.parentNumeration = None
+            self.parent = None
             self._listFormat.setIndent(0)
             return
-        self.parentNumeration = style
-        self._listFormat.setIndent(self.parentNumeration.listFormat().indent() + 1)
+        self.parent = style
+        self._listFormat.setIndent(self.parent.blockFormat().indent() + 1)
 
     def copy(self):
         return BlockStyle(self.blockFormat(), self.charFormat(), self.listFormat(), self.tableFormat(),
@@ -217,7 +216,7 @@ class BlockStyle(QObject):
     def updateListIndent(self, num: int):
         if self._listFormat is None:
             return
-        self._listFormat.setIndent(num)
+        self._blockFormat.setIndent(num)
         self.changed.emit(True)
 
     def updateListType(self, num: int):
@@ -240,7 +239,7 @@ class BlockStyle(QObject):
         res = self.name + " -"
         has_list = self.listFormat() is not None
         has_table = self.tableFormat() is not None
-        has_parent = self.parentNumeration is not None
+        has_parent = self.parent is not None
         if has_list:
             res += " L:Y "
         else:
@@ -252,7 +251,7 @@ class BlockStyle(QObject):
             res += " T:N "
 
         if has_parent:
-            res += " P:" + self.parentNumeration.name + " "
+            res += " P:" + self.parent.name + " "
         else:
             res += " P:N "
 

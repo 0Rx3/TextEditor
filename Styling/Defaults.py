@@ -175,7 +175,7 @@ def _check_paradox(style1, style2):
     while style1 is not None:
         if style1 == style2:
             return True
-        style1 = style1.parentNumeration
+        style1 = style1.parent
 
 
 def compare_char_format(style1: QTextCharFormat, style2: QTextCharFormat):

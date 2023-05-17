@@ -14,6 +14,7 @@ from Styling.ListSettings.SideListStyler import SideListStyler
 from Styling.Ruler import Ruler, convert_mm_to_px
 from Styling.SideStyler import SideStyler
 from Styling.Switches.SwitchButton import SwitchButton
+from Styling.EmittingEdit import EmittingEdit
 from Exporter.ToJSON import toJSON, fromJSON
 
 class EditorComponent(QWidget):
@@ -24,7 +25,7 @@ class EditorComponent(QWidget):
         self.heightRuler.setDisabled(True)
         self.widthRuler = HBorderRuler()
         self.textRuler = Ruler()
-        self.textEdit = QTextEdit()
+        self.textEdit = EmittingEdit()
 
         self.textEdit.setFixedWidth(convert_mm_to_px(210))
         self.textEdit.setMinimumHeight(convert_mm_to_px(150))
@@ -56,7 +57,7 @@ class EditorComponent(QWidget):
         styler_layout.addWidget(self.sideStyler)
         styler_layout.addWidget(self.sideListStyler)
 
-        self.highlighter = BlockHighlighter(self.styles, self.blockStyles, self.textEdit.document())
+        self.highlighter = BlockHighlighter(self.styles, self.blockStyles, self.textEdit.document(), EE=self.textEdit)
 
         self.HTMLExport = QPushButton("to .pdf", self)
         self.MDExport = QPushButton("to .md", self)
@@ -108,7 +109,7 @@ class EditorComponent(QWidget):
 
     def _list_handle(self, list: QTextList, block: QTextBlock):
         style = self.getBlockStyle(block)
-        if style.parentNumeration is None:
+        if style.parent is None:
             other_list = self._find_closest_style_list(style, block)
             if other_list is None or other_list[0] == list:
                 return
@@ -116,11 +117,19 @@ class EditorComponent(QWidget):
                 self._merge_list(other_list[0], list)
         else:
             parent_list = self._find_closest_parent_list(style, block)
-            if parent_list is not None and parent_list[1] is not None:
+            closest_sibling = self._find_closest_style_list(style, block)
+            if parent_list is not None and parent_list[1] is not None and (closest_sibling is None or closest_sibling[0] is None or closest_sibling[1] < parent_list[1]):
                 prefix = self._generate_block_prefix(parent_list[1])
                 modified_format = list.format()
                 modified_format.setNumberPrefix(prefix)
                 list.setFormat(modified_format)
+            elif closest_sibling is not None and closest_sibling[0] is not None:
+                self._merge_list(closest_sibling[0], list)
+
+    def _of_the_same_parent(self, block1, block2):
+        p1 = self._find_closest_parent_list(self.getBlockStyle(block1), block1)
+        p2 = self._find_closest_parent_list(self.getBlockStyle(block2), block2)
+        return p1 == p2
 
     def _add_to_list_simple(self, style, block):
         listed = self._find_closest_style_list(style, block)
@@ -263,13 +272,13 @@ class EditorComponent(QWidget):
         return None
 
     def _find_closest_parent_list(self, style, block):
-        style = style.parentNumeration
+        style = style.parent
         if style is None:
             return None
         return self._find_closest_style_list(style, block)
 
     def _on_parent_change(self, num: int):
-        if num < 0 or num == self.currentStyle or self.styles[num].listFormat() is None or self.styles[num].parentNumeration == self.getCurrentStyle():
+        if num < 0 or num == self.currentStyle or self.styles[num].listFormat() is None or self.styles[num].parent == self.getCurrentStyle():
             self.getCurrentStyle().updateParent(None)
             return
         self.getCurrentStyle().updateParent(self.styles[num])
