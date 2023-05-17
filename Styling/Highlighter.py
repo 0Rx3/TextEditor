@@ -1,6 +1,7 @@
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QSyntaxHighlighter, QTextCursor, QTextList, QTextBlock, QTextFormat
 from PyQt6.QtWidgets import QApplication
+import cProfile
 
 from Styling.BlockStyle import BlockStyle
 from Styling.Defaults import compare_block_format, compare_char_format, compare_list_format, numeric_formats
@@ -29,37 +30,52 @@ class BlockHighlighter(QSyntaxHighlighter):
     def _on_key_pressed(self, key: int):
         self.lastKey = key
 
+    def threaded_iteration(self, consecutive_blocks, style, list_fmt, num, cursor):
+        first_block = consecutive_blocks[0]
+        last_block = consecutive_blocks[-1]
+        cursor.setPosition(first_block.position())
+        cursor.setPosition(last_block.position() + last_block.length() - 1, QTextCursor.MoveMode.KeepAnchor)
+        if list_fmt is None:
+            for b in consecutive_blocks:
+                self._remove_list(b)
+            if not compare_block_format(cursor.blockFormat(), style.blockFormat()):
+                cursor.setBlockFormat(style.blockFormat())
+            cursor.setCharFormat(style.charFormat())
+        elif self.lastKey != Qt.Key.Key_Backspace:
+            cursor.createList(list_fmt)
+            if num > 0 or style.parent is not None:
+                self.createdList.emit(cursor.currentList(), first_block)
+            if not compare_char_format(cursor.charFormat(), style.charFormat()):
+                if first_block.position() > 0:
+                    cursor.setPosition(first_block.position() - 1)
+                cursor.setPosition(last_block.position() + last_block.length() - 1, QTextCursor.MoveMode.KeepAnchor)
+                cursor.mergeCharFormat(style.charFormat())
+            if not compare_block_format(cursor.blockFormat(), style.blockFormat()):
+                if first_block.position() > 0:
+                    cursor.setPosition(first_block.position())
+                cursor.setPosition(last_block.position(), QTextCursor.MoveMode.KeepAnchor)
+                cursor.mergeBlockFormat(style.blockFormat())
+
+    def highlightBlock(self, text):
+        number = self.currentBlock().blockNumber()
+        try:
+            styleId = self.blockStyles[self.currentBlock().blockNumber()]
+            if number == self.blockStyles.index(styleId):
+                self.insideFunction(self.styles[styleId])
+        except IndexError:
+            pass
+
+    def rehighlight(self) -> None:
+        #for st in self.styles:
+        #    cProfile.runctx("self.insideFunction(st)", globals(), locals(), sort="cumtime")
+        super().rehighlight()
+
     def insideFunction(self, style: BlockStyle):
         cursor = QTextCursor(self.document())
         style_blocks = self.getConsecutiveBlocks(style)
-        cursor.beginEditBlock()
         list_fmt = style.listFormat()
         for num, consecutive_blocks in enumerate(style_blocks):
-            first_block = consecutive_blocks[0]
-            last_block = consecutive_blocks[-1]
-            cursor.setPosition(first_block.position())
-            cursor.setPosition(last_block.position() + last_block.length() - 1, QTextCursor.MoveMode.KeepAnchor)
-            if list_fmt is None:
-                for b in consecutive_blocks:
-                    self._remove_list(b)
-                if not compare_block_format(cursor.blockFormat(), style.blockFormat()):
-                    cursor.setBlockFormat(style.blockFormat())
-                cursor.setCharFormat(style.charFormat())
-            # check if not backspace
-            elif self.lastKey != Qt.Key.Key_Backspace:
-                cursor.createList(list_fmt)
-                self.createdList.emit(cursor.currentList(), first_block)
-                if not compare_char_format(cursor.charFormat(), style.charFormat()):
-                    if first_block.position() > 0:
-                        cursor.setPosition(first_block.position() - 1)
-                    cursor.setPosition(last_block.position() + last_block.length() - 1, QTextCursor.MoveMode.KeepAnchor)
-                    cursor.setCharFormat(style.charFormat())
-                if not compare_block_format(cursor.blockFormat(), style.blockFormat()):
-                    if first_block.position() > 0:
-                        cursor.setPosition(first_block.position())
-                    cursor.setPosition(last_block.position(), QTextCursor.MoveMode.KeepAnchor)
-                    cursor.setBlockFormat(style.blockFormat())
-        cursor.endEditBlock()
+            self.threaded_iteration(consecutive_blocks, style, list_fmt, num, cursor)
 
     def getConsecutiveBlocks(self, style):
         blocks = []
@@ -75,10 +91,6 @@ class BlockHighlighter(QSyntaxHighlighter):
         if len(app) > 0:
             blocks.append(app)
         return blocks
-
-    def highlightBlock(self, text):
-        for st in self.styles:
-            self.insideFunction(st)
 
     def _remove_list(self, block):
         list = block.textList()

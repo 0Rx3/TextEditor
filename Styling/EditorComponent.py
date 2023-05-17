@@ -1,4 +1,6 @@
-from PyQt6.QtCore import Qt, QTimer
+import time
+
+from PyQt6.QtCore import Qt, QTimer, QThread
 from PyQt6.QtGui import QTextCursor, QTextList, QTextOption, QTextBlock, QTextFormat, QTextListFormat, QAction
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QTextEdit, QGridLayout, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QFileDialog
@@ -18,6 +20,7 @@ from Styling.EmittingEdit import EmittingEdit
 from Exporter.ToJSON import toJSON, fromJSON
 
 timer_active = False
+
 
 class EditorComponent(QWidget):
     def __init__(self):
@@ -97,7 +100,7 @@ class EditorComponent(QWidget):
 
         self.setLayout(mainLayout)
         self.highlighter.createdList.connect(self._list_handle)
-        self.styles[0].changed.connect(self.update_checker)
+        self.styles[0].changed.connect(self.highlight_wrap)
         self.update_margins((self.widthRuler.value(), self.textRuler.value()), self.getCurrentStyle())
 
         self.BoldAction = QAction("Bold", self)
@@ -108,6 +111,16 @@ class EditorComponent(QWidget):
         style.updateMarginLeft(block[0])
         style.updateMarginRight(self.textRuler.maximum() - block[2])
         style.updateTextIndent(block[1] - block[0])
+
+    def blockAll(self):
+        for st in self.styles:
+            st.blockSignals(True)
+        self.sideStyler.block(True)
+        self.sideListStyler.block(True)
+
+
+    def highlight_wrap(self):
+        self.highlighter.rehighlight()
 
     def _list_handle(self, list: QTextList, block: QTextBlock):
         style = self.getBlockStyle(block)
@@ -181,13 +194,13 @@ class EditorComponent(QWidget):
 
     def addStyle(self, style: BlockStyle):
         self.styles.append(style)
-        self.styles[-1].changed.connect(self.update_checker)
+        self.styles[-1].changed.connect(self.highlight_wrap)
         self.currentStyle = self.sideStyler.Selector.currentRow() + 1
         blocks = self._get_blocks_between()
         self.sideStyler.init(self.styles[self.currentStyle], self.currentStyle, self.styles)
         for b in blocks:
             self.blockStyles[b] = self.currentStyle
-        self.highlighter.highlightBlock("")
+        self.force_update()
 
     def removeStyle(self, num: int):
         if num == 0:
@@ -198,15 +211,6 @@ class EditorComponent(QWidget):
             if self.blockStyles[i] == num:
                 self.blockStyles[i] = self.currentStyle
         self.highlighter.highlightBlock("")
-
-    def update_checker(self):
-        global timer_active
-
-        if not timer_active:
-            timer_active = True
-            self.force_update()
-            self.highlighter.highlightBlock("")
-            QTimer.singleShot(100, self.update_checker)
 
     def force_update(self):
         self.currentBlock = self.textEdit.textCursor().block()

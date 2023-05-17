@@ -61,6 +61,14 @@ class SideListStyler(QWidget):
                     return i
             return -1
 
+    def block(self, bool):
+        self.blockSignals(bool)
+        self.Selector.blockSignals(bool)
+        self.IndentModifier.blockSignals(bool)
+        self.SPModifier.blockSignals(bool)
+        self.TypeModifier.blockSignals(bool)
+
+
     def init(self, init, parentNames, index=0):
         self.blockSignals(True)
         self.Selector.blockSignals(True)
