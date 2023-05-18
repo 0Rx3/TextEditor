@@ -17,7 +17,7 @@ class BlockHighlighter(QSyntaxHighlighter):
         self.styles = styles
         self.EE = EE
         self.blockStyles = blockStyles
-        self.prev_blockStyles = []
+        self.needsUpdate = [0 for _ in range(len(self.blockStyles))]
         self.lastKey = None
         if EE is not None:
             self.EE.buttonPressed.connect(self._on_key_pressed)
@@ -41,7 +41,7 @@ class BlockHighlighter(QSyntaxHighlighter):
             if not compare_block_format(cursor.blockFormat(), style.blockFormat()):
                 cursor.setBlockFormat(style.blockFormat())
             cursor.setCharFormat(style.charFormat())
-        elif self.lastKey != Qt.Key.Key_Backspace:
+        elif self.lastKey != Qt.Key.Key_Backspace and self.lastKey != Qt.Key.Key_Return:
             cursor.createList(list_fmt)
             if num > 0 or style.parent is not None:
                 self.createdList.emit(cursor.currentList(), first_block)
