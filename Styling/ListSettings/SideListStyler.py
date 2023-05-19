@@ -117,12 +117,15 @@ class SideListStyler(QWidget):
         except IndexError:
             pass
         self._on_parent_changed()
+        self.anyChange.emit()
 
     def _on_suffix_changed(self, suffix):
         self.style.updateListSuffix(suffix)
+        self.anyChange.emit()
 
     def _on_prefix_changed(self, prefix):
         self.style.updateListPrefix(prefix)
+        self.anyChange.emit()
 
     def _on_parent_changed(self):
         listed_styles = []

@@ -53,10 +53,11 @@ class EditorComponent(QWidget):
         self.sideStyler.addedStyle.connect(self.addStyle)
         self.sideStyler.removedStyle.connect(self.removeStyle)
         self.sideStyler.changedId.connect(self._on_style_switch)
-        self.sideStyler.anyChange.connect(self.force_update)
+        self.sideStyler.anyChange.connect(self.highlight_wrap)
 
         self.sideListStyler = SideListStyler(self, self.styles, self.currentStyle)
         self.sideListStyler.changedParent.connect(self._on_parent_change)
+        self.sideListStyler.anyChange.connect(self.highlight_wrap)
 
         styler_layout = QVBoxLayout()
         styler_layout.addWidget(self.sideStyler)
@@ -118,8 +119,8 @@ class EditorComponent(QWidget):
         self.sideStyler.block(True)
         self.sideListStyler.block(True)
 
-
     def highlight_wrap(self):
+        self.force_update()
         self.highlighter.rehighlight()
 
     def _list_handle(self, list: QTextList, block: QTextBlock):
@@ -299,15 +300,15 @@ class EditorComponent(QWidget):
             self.getCurrentStyle().updateParent(None)
             return
         self.getCurrentStyle().updateParent(self.styles[num])
+        self.highlight_wrap()
 
     def _on_style_switch(self, styleId: int):
         if styleId > len(self.styles) - 1:
             return
-        cp, sp = self._current_cursor_position()
         blocks_to_change = self._get_blocks_between()
         for blockId in blocks_to_change:
             self.blockStyles[blockId] = styleId
-        #self._restore_cursor_position(cp, sp)
+        self.highlight_wrap()
 
     def _get_blocks_between(self):
         cursor = self.textEdit.textCursor()
@@ -405,6 +406,7 @@ class EditorComponent(QWidget):
         with open("tryout1.json", "r") as f:
             json_data = json.load(f)
         fromJSON(json_data, self)
+        self.highlight_wrap()
 
 
 
