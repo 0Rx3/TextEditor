@@ -1,5 +1,4 @@
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QTextListFormat
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QListWidgetItem, QSpinBox, QHBoxLayout
 
 from Styling.BlockStyle import BlockStyle

@@ -1,15 +1,16 @@
 import time
 
-from PyQt6.QtCore import Qt, QTimer, QThread
-from PyQt6.QtGui import QTextCursor, QTextList, QTextOption, QTextBlock, QTextFormat, QTextListFormat, QAction
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QTextCursor, QTextList, QTextOption, QTextBlock, QAction
 from PyQt6.QtPrintSupport import QPrinter
-from PyQt6.QtWidgets import QTextEdit, QGridLayout, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QFileDialog
+from PyQt6.QtWidgets import QGridLayout, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QFileDialog
 
 import json
 from Exporter.ToMarkdown import convert_qt_markdown
 from Styling.BlockStyle import BlockStyle
 from Styling.BorderRuler import VBorderRuler, HBorderRuler
-from Styling.Defaults import default_char_format, default_block_format, numeric_formats, _check_paradox, disc_marker, \
+from Styling.Conversion import convert_percent_to_px_h
+from Styling.Defaults import numeric_formats, _check_paradox, disc_marker, \
     convert_decimal_to_alpha, convert_decimal_to_roman, DefaultBlockStyle
 from Styling.Highlighter import BlockHighlighter
 from Styling.ListSettings.SideListStyler import SideListStyler
@@ -33,7 +34,7 @@ class EditorComponent(QWidget):
         self.textEdit = EmittingEdit()
 
         self.textEdit.setFixedWidth(convert_mm_to_px(210))
-        self.textEdit.setMinimumHeight(convert_mm_to_px(150))
+        self.textEdit.setMinimumHeight(convert_percent_to_px_h(5))
         self.widthRuler.valueChanged.connect(self._on_width_ruler_change)
         self.textRuler.valueChanged.connect(self._on_text_ruler_change)
         self.widthRuler.setMaximumHeight(convert_mm_to_px(10))
@@ -402,8 +403,8 @@ class EditorComponent(QWidget):
                 cursor.setPosition(end_pos, QTextCursor.MoveMode.KeepAnchor)
             self.textEdit.setTextCursor(cursor)
 
-    def _from_json(self):
-        with open("tryout1.json", "r") as f:
+    def _from_json(self, filename):
+        with open(filename, "r") as f:
             json_data = json.load(f)
         fromJSON(json_data, self)
         self.highlight_wrap()

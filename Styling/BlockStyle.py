@@ -2,9 +2,8 @@
 
 from PyQt6.QtCore import QObject, pyqtSignal, Qt
 from PyQt6.QtGui import QTextBlockFormat, QTextCharFormat, QTextListFormat, \
-    QTextTableFormat, QTextFormat, QFont, QColor
-
-from Styling.Ruler import convert_mm_to_px
+    QTextTableFormat, QFont
+from Styling.Conversion import convert_mm_to_px
 
 
 class BlockStyle(QObject):

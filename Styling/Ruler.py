@@ -1,25 +1,9 @@
-from PyQt6 import QtWidgets
+
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtWidgets import QSizePolicy
 from qtrangeslider import QLabeledRangeSlider
 
-
-def convert_mm_to_px(mm):
-    screen = QtWidgets.QApplication.primaryScreen()
-    width_mm = screen.physicalSize().width()
-    width_px = screen.geometry().width()
-    ratio = width_px / width_mm
-    result = mm * ratio
-    return result
-
-
-def convert_px_to_mm(px):
-    screen = QtWidgets.QApplication.primaryScreen()
-    width_mm = screen.physicalSize().width()
-    width_px = screen.geometry().width()
-    ratio = width_px / width_mm
-    result = px / ratio
-    return result
+from Styling.Conversion import convert_mm_to_px, convert_percent_to_px_w, convert_px_to_mm
 
 
 class Ruler(QLabeledRangeSlider):

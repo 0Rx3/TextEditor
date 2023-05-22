@@ -1,10 +1,7 @@
-from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QSyntaxHighlighter, QTextCursor, QTextList, QTextBlock, QTextFormat
-from PyQt6.QtWidgets import QApplication
-import cProfile
-
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QSyntaxHighlighter, QTextCursor, QTextList, QTextBlock
 from Styling.BlockStyle import BlockStyle
-from Styling.Defaults import compare_block_format, compare_char_format, compare_list_format, numeric_formats
+from Styling.Defaults import compare_block_format, compare_char_format, numeric_formats
 
 
 class BlockHighlighter(QSyntaxHighlighter):

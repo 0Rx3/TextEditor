@@ -226,20 +226,3 @@ def compare_list_format(style1: QTextListFormat, style2: QTextListFormat):
     if style1.indent() != style2.indent():
         return False
     return True
-
-def convert_mm_to_px(mm):
-    screen = QtWidgets.QApplication.primaryScreen()
-    width_mm = screen.physicalSize().width()
-    width_px = screen.geometry().width()
-    ratio = width_px / width_mm
-    result = mm * ratio
-    return result
-
-
-def convert_px_to_mm(px):
-    screen = QtWidgets.QApplication.primaryScreen()
-    width_mm = screen.physicalSize().width()
-    width_px = screen.geometry().width()
-    ratio = width_px / width_mm
-    result = px / ratio
-    return result
